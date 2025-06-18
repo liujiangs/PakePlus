@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>摄像头拍照清晰度解决</title>
+</head>
+<style>
+    #phoneCanvas,#phoneVideo{
+        width: 100vw;
+        height: 80vh;
+    }
+    img{
+        width: 400px;
+        height: 300px;
+    }
+</style>
+<body>
+    <div className="crop-area">
+        <canvas id='phoneCanvas' width='800' height='600'></canvas>
+        <video  id="phoneVideo" width="400" height="300"></video>
+        <button id="pz">拍照</button>
+        <div>
+            <img src="" id="img" alt="">
+        </div>
+    </div>
+</body>
+<script>
+    let name = '';//电脑摄像头的名称  我的电脑 - 管理 - 设备管理器 - 摄像头查看名称
+    var mediaStreamTrack=null,img=document.getElementById('img'),pz=document.getElementById('pz');
+    let CWidth = 800,CHeight=600;
+    //获取识别摄像头
+    function getMenuVideo(name,callback){
+        navigator.mediaDevices.enumerateDevices().then((dev)=>{
+            console.log(dev)
+            let at = false;
+            if(dev){
+                dev.map((item,index)=>{
+                    if(item.kind==='videoinput'){
+                        if(item.label.indexOf(name)>-1){
+                            let constraints={
+                                audio: false,
+                                video: {
+                                    optional: [
+                                        {
+                                            sourceId:item.deviceId
+                                        }
+                                    ]
+                                }
+                            };
+                            navigator.mediaDevices.getUserMedia(constraints).then(stream => {
+                                callback(stream)
+                            })
+                            at=true
+                        }
+                    }
+                    return null;
+                })
+                if(!at){
+                    alert('未检测到摄像头设备')
+                }
+            }
+        }).then((stream2)=>{
+    
+        });
+    }
+    phoneInit()
+    //启用
+    function phoneInit(){
+        const constraints = {
+            width: {min: 800, ideal: 1600},
+            height: {min: 600, ideal: 1200},
+            advanced: [
+              {width: 1200, height: 900},
+              {aspectRatio: 1.333}
+            ]
+        };
+        setTimeout(()=>{
+                payVideo = document.getElementById('phoneVideo');
+                //媒体对象
+                getMenuVideo(name,(strem)=>{
+                    mediaStreamTrack = typeof strem.stop === 'function' ? strem :
+                    strem.getVideoTracks()[0]; 
+                    mediaStreamTrack.applyConstraints(constraints)
+                    payVideo.srcObject = strem;
+                    payVideo.play();
+                    payVideo.onerror = function () {
+                        strem.stop();
+                    };
+                    strem.onended = (r)=>{
+                        console.log(r)
+                    };
+                    payVideo.onloadedmetadata = function () {
+                        phoneStart(0)
+                        console.log('打开摄像头')
+                    };
+                })
+        },500)
+    }
+    pz.onclick=function(){
+        phoneStart(1)
+    }
+    phoneStart=(state)=>{
+        let video = document.getElementById('phoneVideo'),
+            canvas = document.getElementById('phoneCanvas');
+         //绘制canvas图形
+        if(!canvas) return;
+        let ctx = canvas.getContext('2d')
+            var ratio = getPixelRatio(ctx);
+        if(!state)  {
+            drawCanvas()
+        }
+        function drawCanvas() {
+            ctx.drawImage(video,-CWidth*((ratio-1)/2),-CHeight*((ratio-1)/2), CWidth*ratio, CHeight*ratio);
+            timer = requestAnimationFrame(drawCanvas);
+        }
+        //把canvas图像转为img图片
+        let img64 = canvas.toDataURL("image/png");
+        if(!img64) return;
+        if(state){
+            img.src=img64;
+        }
+    }
+    function getPixelRatio(context){
+        var backingStore = context.backingStorePixelRatio ||
+            context.webkitBackingStorePixelRatio ||
+            context.mozBackingStorePixelRatio ||
+            context.msBackingStorePixelRatio ||
+            context.oBackingStorePixelRatio ||
+            context.backingStorePixelRatio || 1;
+        return (window.devicePixelRatio || 1) / backingStore;
+    }
+    //关闭摄像头
+    function close(){
+        mediaStreamTrack && mediaStreamTrack.stop();
+    }
+</script>
+</html>
